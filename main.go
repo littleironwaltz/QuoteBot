@@ -74,7 +74,7 @@ func main() {
 		case sig := <-sigChan:
 			fmt.Printf("\nシグナル %v を受信しました。シャットダウンします...\n", sig)
 			// バックグラウンドトークン更新プロセスのクリーンアップ
-			blueskyRepo.done <- struct{}{}
+			blueskyRepo.Done <- struct{}{}
 			return
 		}
 	}
