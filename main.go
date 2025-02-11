@@ -17,7 +17,7 @@ import (
 func main() {
 	cfg, err := config.New()
 	if err != nil {
-		log.Fatalf("設定の読み込みに失敗: %v", err)
+		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
 	quoteRepo := repository.NewQuoteRepository(cfg)
@@ -25,55 +25,55 @@ func main() {
 	quoteUseCase := usecase.NewQuoteUseCase(quoteRepo)
 
 	if err := quoteUseCase.Initialize(); err != nil {
-		log.Fatalf("ユースケースの初期化に失敗: %v", err)
+		log.Fatalf("Failed to initialize use case: %v", err)
 	}
 
-	// シグナル処理の設定
+	// Set up signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// タイマーの設定
+	// Set up timer
 	ticker := time.NewTicker(cfg.PostInterval)
 	defer ticker.Stop()
 
-	// アプリケーション全体のコンテキストを作成
+	// Create application-wide context
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fmt.Printf("QuoteBot を起動しました（投稿間隔: %v）...\n", cfg.PostInterval)
+	fmt.Printf("QuoteBot started (posting interval: %v)...\n", cfg.PostInterval)
 
-	// 初回投稿
+	// Initial post
 	reqCtx, reqCancel := context.WithTimeout(ctx, cfg.HTTPTimeout)
 	quote, err := quoteUseCase.PostRandomQuote(reqCtx)
 	if err != nil {
-		log.Printf("初回投稿エラー: %v", err)
+		log.Printf("Failed to make initial post: %v", err)
 	} else {
 		message := fmt.Sprintf("%s\n- %s", quote.Text, quote.Author)
 		if err := blueskyRepo.PostMessage(reqCtx, message); err != nil {
-			log.Printf("初回投稿エラー: %v", err)
+			log.Printf("Failed to make initial post: %v", err)
 		}
 	}
 	reqCancel()
 
-	// メインループ
+	// Main loop
 	for {
 		select {
 		case <-ticker.C:
 			reqCtx, reqCancel := context.WithTimeout(ctx, cfg.HTTPTimeout)
 			quote, err := quoteUseCase.PostRandomQuote(reqCtx)
 			if err != nil {
-				log.Printf("投稿エラー: %v", err)
+				log.Printf("Failed to post message: %v", err)
 				reqCancel()
 				continue
 			}
 			message := fmt.Sprintf("%s\n- %s", quote.Text, quote.Author)
 			if err := blueskyRepo.PostMessage(reqCtx, message); err != nil {
-				log.Printf("投稿エラー: %v", err)
+				log.Printf("Failed to post message: %v", err)
 			}
 			reqCancel()
 		case sig := <-sigChan:
-			fmt.Printf("\nシグナル %v を受信しました。シャットダウンします...\n", sig)
-			// バックグラウンドトークン更新プロセスのクリーンアップ
+			fmt.Printf("\nReceived signal %v. Shutting down...\n", sig)
+			// Clean up background token refresh process
 			blueskyRepo.Done <- struct{}{}
 			return
 		}
