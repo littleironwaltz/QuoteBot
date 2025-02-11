@@ -20,7 +20,7 @@ type BlueskyRepository struct {
 	client      *http.Client
 	bufferPool  *sync.Pool
 	refreshTick *time.Ticker
-	done        chan struct{}
+	Done        chan struct{}  // Exported for cleanup in main
 }
 
 // NewBlueskyRepository は新しいBlueskyRepositoryインスタンスを作成します
@@ -41,7 +41,7 @@ func NewBlueskyRepository(cfg *config.Config) *BlueskyRepository {
 				return new(bytes.Buffer)
 			},
 		},
-		done: make(chan struct{}),
+		Done: make(chan struct{}),
 	}
 	
 	// Start background token refresh (every 45 minutes)
@@ -61,7 +61,7 @@ func (r *BlueskyRepository) backgroundTokenRefresh() {
 				log.Printf("バックグラウンドトークン更新に失敗: %v", err)
 			}
 			cancel()
-		case <-r.done:
+		case <-r.Done:
 			r.refreshTick.Stop()
 			return
 		}
