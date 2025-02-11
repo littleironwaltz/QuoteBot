@@ -36,38 +36,45 @@ func main() {
 	ticker := time.NewTicker(cfg.PostInterval)
 	defer ticker.Stop()
 
+	// アプリケーション全体のコンテキストを作成
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	fmt.Printf("QuoteBot を起動しました（投稿間隔: %v）...\n", cfg.PostInterval)
 
 	// 初回投稿
-	ctx := context.Background()
-	quote, err := quoteUseCase.PostRandomQuote(ctx)
+	reqCtx, reqCancel := context.WithTimeout(ctx, cfg.HTTPTimeout)
+	quote, err := quoteUseCase.PostRandomQuote(reqCtx)
 	if err != nil {
 		log.Printf("初回投稿エラー: %v", err)
 	} else {
 		message := fmt.Sprintf("%s\n- %s", quote.Text, quote.Author)
-		if err := blueskyRepo.PostMessage(ctx, message); err != nil {
+		if err := blueskyRepo.PostMessage(reqCtx, message); err != nil {
 			log.Printf("初回投稿エラー: %v", err)
 		}
 	}
+	reqCancel()
 
 	// メインループ
 	for {
 		select {
 		case <-ticker.C:
-			ctx, cancel := context.WithTimeout(context.Background(), cfg.HTTPTimeout)
-			quote, err := quoteUseCase.PostRandomQuote(ctx)
+			reqCtx, reqCancel := context.WithTimeout(ctx, cfg.HTTPTimeout)
+			quote, err := quoteUseCase.PostRandomQuote(reqCtx)
 			if err != nil {
 				log.Printf("投稿エラー: %v", err)
-				cancel()
+				reqCancel()
 				continue
 			}
 			message := fmt.Sprintf("%s\n- %s", quote.Text, quote.Author)
-			if err := blueskyRepo.PostMessage(ctx, message); err != nil {
+			if err := blueskyRepo.PostMessage(reqCtx, message); err != nil {
 				log.Printf("投稿エラー: %v", err)
 			}
-			cancel()
+			reqCancel()
 		case sig := <-sigChan:
 			fmt.Printf("\nシグナル %v を受信しました。シャットダウンします...\n", sig)
+			// バックグラウンドトークン更新プロセスのクリーンアップ
+			blueskyRepo.Done <- struct{}{}
 			return
 		}
 	}

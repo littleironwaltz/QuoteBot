@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/kojikubota/quotebot/config"
@@ -14,19 +16,58 @@ import (
 
 // BlueskyRepository はBlueskyへの投稿を担当します
 type BlueskyRepository struct {
-	cfg    *config.Config
-	client *http.Client
+	cfg         *config.Config
+	client      *http.Client
+	bufferPool  *sync.Pool
+	refreshTick *time.Ticker
+	Done        chan struct{}  // Exported for cleanup in main
 }
 
 // NewBlueskyRepository は新しいBlueskyRepositoryインスタンスを作成します
 func NewBlueskyRepository(cfg *config.Config) *BlueskyRepository {
-	return &BlueskyRepository{
+	transport := &http.Transport{
+		IdleConnTimeout:     90 * time.Second,
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+	}
+	repo := &BlueskyRepository{
 		cfg: cfg,
 		client: &http.Client{
-			Timeout: cfg.HTTPTimeout,
+			Timeout:   cfg.HTTPTimeout,
+			Transport: transport,
 		},
+		bufferPool: &sync.Pool{
+			New: func() interface{} {
+				return new(bytes.Buffer)
+			},
+		},
+		Done: make(chan struct{}),
+	}
+	
+	// Start background token refresh (every 45 minutes)
+	repo.refreshTick = time.NewTicker(45 * time.Minute)
+	go repo.backgroundTokenRefresh()
+	
+	return repo
+}
+
+// backgroundTokenRefresh は定期的にトークンを更新するバックグラウンドプロセスを実行します
+func (r *BlueskyRepository) backgroundTokenRefresh() {
+	for {
+		select {
+		case <-r.refreshTick.C:
+			ctx, cancel := context.WithTimeout(context.Background(), r.cfg.HTTPTimeout)
+			if err := r.RefreshToken(ctx); err != nil {
+				log.Printf("バックグラウンドトークン更新に失敗: %v", err)
+			}
+			cancel()
+		case <-r.Done:
+			r.refreshTick.Stop()
+			return
+		}
 	}
 }
+
 
 // RefreshToken はリフレッシュトークンを使用して新しいアクセストークンを取得します
 func (r *BlueskyRepository) RefreshToken(ctx context.Context) error {
@@ -76,9 +117,13 @@ func (r *BlueskyRepository) PostMessage(ctx context.Context, message string) err
 		"record":     record,
 	}
 
-	bodyBytes, err := json.Marshal(body)
-	if err != nil {
-		return fmt.Errorf("failed to marshal request body: %w", err)
+	// Get buffer from pool
+	buf := r.bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer r.bufferPool.Put(buf)
+
+	if err := json.NewEncoder(buf).Encode(body); err != nil {
+		return fmt.Errorf("failed to encode request body: %w", err)
 	}
 
 	headers := map[string]string{
@@ -86,7 +131,7 @@ func (r *BlueskyRepository) PostMessage(ctx context.Context, message string) err
 		"Content-Type":  "application/json",
 	}
 
-	resp, err := doHTTPRequest(ctx, r.client, "POST", url, bytes.NewBuffer(bodyBytes), headers)
+	resp, err := doHTTPRequest(ctx, r.client, "POST", url, buf, headers)
 	if err != nil {
 		if httpErr, ok := err.(*HTTPError); ok && httpErr.StatusCode == http.StatusUnauthorized {
 			// トークンの更新を試みる
@@ -96,7 +141,12 @@ func (r *BlueskyRepository) PostMessage(ctx context.Context, message string) err
 
 			// 新しいトークンで再試行
 			headers["Authorization"] = fmt.Sprintf("Bearer %s", r.cfg.AccessJWT)
-			resp, err = doHTTPRequest(ctx, r.client, "POST", url, bytes.NewBuffer(bodyBytes), headers)
+			// Reset buffer position for reuse
+			buf.Reset()
+			if err := json.NewEncoder(buf).Encode(body); err != nil {
+				return fmt.Errorf("failed to encode request body for retry: %w", err)
+			}
+			resp, err = doHTTPRequest(ctx, r.client, "POST", url, buf, headers)
 			if err != nil {
 				return fmt.Errorf("failed to post message after token refresh: %w", err)
 			}
