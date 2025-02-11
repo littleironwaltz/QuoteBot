@@ -1,19 +1,11 @@
 # QuoteBot
 
-QuoteBotは、名言を定期的にBlueskyに投稿するボットアプリケーションです。クリーンアーキテクチャの原則に従い、保守性と拡張性の高い設計を採用しています。
-
-## 機能
-
-- JSONファイルから名言をランダムに選択
-- Blueskyへの自動投稿（1時間間隔）
-- 環境変数による設定管理
-- クリーンアーキテクチャに基づく設計
+Blueskyに定期的に名言を投稿するボット
 
 ## 必要条件
 
 - Go 1.21以上
-- Bluesky アカウント
-- アクセストークン（JWT）
+- Blueskyアカウント
 
 ## 環境変数
 
@@ -23,7 +15,8 @@ QuoteBotは、名言を定期的にBlueskyに投稿するボットアプリケ�
 
 | 環境変数 | 説明 | 例 |
 |----------|------|-----|
-| `ACCESS_JWT` | Blueskyのアクセストークン | `ey...` |
+| `ACCESS_JWT` | Blueskyのアクセストークン | `eyJ0eXAiOi...` |
+| `REFRESH_JWT` | Blueskyのリフレッシュトークン | `eyJ0eXAiOi...` |
 | `DID` | BlueskyのDID | `did:plc:...` |
 
 ### オプションの環境変数
@@ -32,7 +25,7 @@ QuoteBotは、名言を定期的にBlueskyに投稿するボットアプリケ�
 |----------|------|------------|
 | `PDS_URL` | BlueskyのPDS URL | `https://bsky.social` |
 | `QUOTES_FILE` | 名言データのJSONファイル | `quotes.json` |
-| `POST_INTERVAL` | 投稿間隔 | `1h` |
+| `POST_INTERVAL` | 投稿間隔（例：30m, 1h, 2h） | `1h` |
 | `HTTP_TIMEOUT` | HTTPリクエストのタイムアウト | `10s` |
 
 ## 環境変数の設定方法
@@ -42,6 +35,7 @@ QuoteBotは、名言を定期的にBlueskyに投稿するボットアプリケ�
 ```bash
 # 必須の環境変数
 export ACCESS_JWT="your_access_jwt"
+export REFRESH_JWT="your_refresh_jwt"
 export DID="your_did"
 
 # オプションの環境変数（必要に応じて）
@@ -56,6 +50,7 @@ export HTTP_TIMEOUT="10s"
 ```powershell
 # 必須の環境変数
 $env:ACCESS_JWT="your_access_jwt"
+$env:REFRESH_JWT="your_refresh_jwt"
 $env:DID="your_did"
 
 # オプションの環境変数（必要に応じて）
@@ -65,89 +60,72 @@ $env:POST_INTERVAL="1h"
 $env:HTTP_TIMEOUT="10s"
 ```
 
+## Blueskyトークンの取得方法
+
+1. https://bsky.app にログイン
+2. ブラウザの開発者ツール（Chrome/Safariの場合は`F12`または`Command + Option + I`）を開く
+3. `Application`（アプリケーション）タブを選択
+4. 左側の`Local Storage`から`bsky.social`を選択
+5. 以下の値をコピー：
+   - `did`: あなたのDID
+   - `jwt`: アクセストークン（ACCESS_JWT）
+   - `refreshJwt`: リフレッシュトークン（REFRESH_JWT）
+
 ## プロジェクト構造
 
 ```
-QuoteBot/
-├── config/
-│   └── config.go       # アプリケーション設定の管理
-├── internal/
-│   ├── domain/         # ドメインロジック（エンティティ、値オブジェクト）
-│   ├── usecase/        # ユースケース（アプリケーションロジック）
-│   └── interface/
-│       └── repository/ # データアクセス層（外部APIとの通信）
-├── main.go            # アプリケーションのエントリーポイント
-└── quotes.json        # 投稿する名言データ
+.
+├── main.go                 # エントリーポイント
+├── config/                 # 設定関連
+├── internal/               # 内部パッケージ
+│   ├── domain/            # ドメインロジック
+│   ├── usecase/           # ユースケース
+│   └── interface/         # インターフェース
+│       └── repository/    # リポジトリ実装
+└── quotes.json            # 名言データ
 ```
 
-## アーキテクチャ設計
-
-本プロジェクトは以下の層で構成されています：
-
-1. **ドメイン層** (`internal/domain/`)
-   - ビジネスロジックの中核
-   - 外部依存を持たない純粋なビジネスルール
-
-2. **ユースケース層** (`internal/usecase/`)
-   - アプリケーションのユースケースを実装
-   - ドメイン層のロジックを組み合わせて具体的な機能を実現
-
-3. **インターフェース層** (`internal/interface/`)
-   - 外部システム（Bluesky API）とのインタフェース
-   - リポジトリパターンを採用し、データアクセスを抽象化
-
-## 設定管理
-
-- 環境変数による設定管理（[envconfig](https://github.com/kelseyhightower/envconfig)使用）
-- `.env`ファイルでローカル開発環境の設定を管理
-- 必須設定項目の検証機能
-
-## 主要コンポーネント
-
-### Config (`config/config.go`)
-- アプリケーション設定の一元管理
-- 環境変数からの自動設定読み込み
-- デフォルト値の提供
-
-### BlueskyRepository (`internal/interface/repository/bluesky_repository.go`)
-- Bluesky APIとの通信を担当
-- HTTPリクエストの共通処理
-- トークンリフレッシュの自動処理
-
-## エラー処理とロギング
-
-- 構造化されたエラーハンドリング
-- エラーの適切なラッピングとコンテキスト付加
-- HTTPエラーの専用型による表現
-
-## セットアップ
-
-1. リポジトリをクローン
-```bash
-git clone https://github.com/yourusername/QuoteBot.git
-cd QuoteBot
-```
-
-2. 環境変数の設定
-```bash
-cp .env.example .env
-# .envファイルを編集して実際の値を設定
-```
-
-必要な環境変数：
-- `ACCESS_JWT`: Blueskyのアクセストークン
-- `DID`: BlueskyのDID
-
-3. 依存関係のインストール
-```bash
-go mod tidy
-```
-
-## 実行方法
+## ビルドと実行
 
 ```bash
-go run main.go
+# ビルド
+go build -o quotebot
+
+# 実行
+./quotebot
 ```
+
+## 機能
+
+- 設定された間隔（デフォルト1時間）で名言を自動投稿
+- アクセストークンの自動更新
+- エラー時の自動リトライ
+- カスタマイズ可能な投稿間隔
+- 日本語名言の投稿
+
+## エラー対応
+
+よくあるエラーと対処方法：
+
+1. `required key XXX missing value`
+   - 必須の環境変数が設定されていません
+   - 上記の必須環境変数をすべて設定してください
+
+2. `failed to refresh token`
+   - トークンの更新に失敗しました
+   - ACCESS_JWTとREFRESH_JWTが正しいか確認してください
+   - トークンが期限切れの場合は、再度取得してください
+
+3. `failed to post message`
+   - 投稿に失敗しました
+   - インターネット接続を確認してください
+   - トークンが有効か確認してください
+
+## セキュリティ注意事項
+
+- トークン（ACCESS_JWT, REFRESH_JWT）は機密情報です。他人と共有しないでください
+- トークンをソースコードやGitリポジトリに保存しないでください
+- 定期的にトークンを更新することをお勧めします
 
 ## ライセンス
 
