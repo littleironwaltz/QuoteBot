@@ -9,19 +9,19 @@ import (
 	"github.com/kojikubota/quotebot/internal/domain"
 )
 
-// QuoteRepository は名言データの永続化を担当します
+// QuoteRepository handles persistence of quote data
 type QuoteRepository struct {
 	quotesFile string
 }
 
-// NewQuoteRepository は新しいQuoteRepositoryインスタンスを作成します
+// NewQuoteRepository creates a new QuoteRepository instance
 func NewQuoteRepository(cfg *config.Config) *QuoteRepository {
 	return &QuoteRepository{
 		quotesFile: cfg.QuotesFile,
 	}
 }
 
-// LoadQuotes は名言データをファイルから読み込みます
+// LoadQuotes loads quote data from the file
 func (r *QuoteRepository) LoadQuotes() ([]domain.Quote, error) {
 	file, err := os.Open(r.quotesFile)
 	if err != nil {

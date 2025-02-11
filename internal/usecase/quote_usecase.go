@@ -9,25 +9,25 @@ import (
 	"github.com/kojikubota/quotebot/internal/domain"
 )
 
-// QuoteRepository はドメインモデルの永続化インターフェースを定義します
+// QuoteRepository defines the persistence interface for domain models
 type QuoteRepository interface {
 	LoadQuotes() ([]domain.Quote, error)
 }
 
-// QuoteUseCase は名言の取得と投稿を制御します
+// QuoteUseCase controls the retrieval and posting of quotes
 type QuoteUseCase struct {
 	quoteRepo QuoteRepository
 	quotes    []domain.Quote
 }
 
-// NewQuoteUseCase は新しいQuoteUseCaseインスタンスを作成します
+// NewQuoteUseCase creates a new QuoteUseCase instance
 func NewQuoteUseCase(qr QuoteRepository) *QuoteUseCase {
 	return &QuoteUseCase{
 		quoteRepo: qr,
 	}
 }
 
-// Initialize は名言リストを読み込み、初期化を行います
+// Initialize loads the quote list and performs initialization
 func (uc *QuoteUseCase) Initialize() error {
 	quotes, err := uc.quoteRepo.LoadQuotes()
 	if err != nil {
@@ -39,7 +39,7 @@ func (uc *QuoteUseCase) Initialize() error {
 	return nil
 }
 
-// PostRandomQuote はランダムな名言を選択して返します
+// PostRandomQuote selects and returns a random quote
 func (uc *QuoteUseCase) PostRandomQuote(ctx context.Context) (*domain.Quote, error) {
 	if len(uc.quotes) == 0 {
 		return nil, fmt.Errorf("no quotes available")

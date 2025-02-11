@@ -12,7 +12,7 @@ import (
 )
 
 func TestBlueskyRepository_PostMessage(t *testing.T) {
-	// テストサーバーの設定
+	// Set up test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/xrpc/com.atproto.repo.createRecord":
@@ -44,7 +44,7 @@ func TestBlueskyRepository_PostMessage(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常系: 初回投稿成功",
+			name: "success case: initial post successful",
 			cfg: &config.Config{
 				AccessJWT:    "valid-token",
 				RefreshJWT:   "refresh-token",
@@ -52,11 +52,11 @@ func TestBlueskyRepository_PostMessage(t *testing.T) {
 				PDSURL:      server.URL,
 				HTTPTimeout: 3 * time.Second,
 			},
-			message: "テストメッセージ",
+			message: "test message",
 			wantErr: false,
 		},
 		{
-			name: "異常系: 認証エラーからリフレッシュ後成功",
+			name: "error case: successful after auth error and refresh",
 			cfg: &config.Config{
 				AccessJWT:    "invalid-token",
 				RefreshJWT:   "refresh-token",
@@ -64,7 +64,7 @@ func TestBlueskyRepository_PostMessage(t *testing.T) {
 				PDSURL:      server.URL,
 				HTTPTimeout: 3 * time.Second,
 			},
-			message: "テストメッセージ",
+			message: "test message",
 			wantErr: false,
 		},
 	}
@@ -82,7 +82,7 @@ func TestBlueskyRepository_PostMessage(t *testing.T) {
 }
 
 func TestBlueskyRepository_RefreshToken(t *testing.T) {
-	// テストサーバーの設定
+	// Set up test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/xrpc/com.atproto.server.refreshSession" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
@@ -110,7 +110,7 @@ func TestBlueskyRepository_RefreshToken(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常系: トークンリフレッシュ成功",
+			name: "success case: token refresh successful",
 			cfg: &config.Config{
 				AccessJWT:    "old-token",
 				RefreshJWT:   "old-refresh-token",

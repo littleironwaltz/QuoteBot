@@ -14,7 +14,7 @@ import (
 	"github.com/kojikubota/quotebot/config"
 )
 
-// BlueskyRepository はBlueskyへの投稿を担当します
+// BlueskyRepository handles posting to Bluesky
 type BlueskyRepository struct {
 	cfg         *config.Config
 	client      *http.Client
@@ -23,7 +23,7 @@ type BlueskyRepository struct {
 	Done        chan struct{}  // Exported for cleanup in main
 }
 
-// NewBlueskyRepository は新しいBlueskyRepositoryインスタンスを作成します
+// NewBlueskyRepository creates a new BlueskyRepository instance
 func NewBlueskyRepository(cfg *config.Config) *BlueskyRepository {
 	transport := &http.Transport{
 		IdleConnTimeout:     90 * time.Second,
@@ -51,14 +51,14 @@ func NewBlueskyRepository(cfg *config.Config) *BlueskyRepository {
 	return repo
 }
 
-// backgroundTokenRefresh は定期的にトークンを更新するバックグラウンドプロセスを実行します
+// backgroundTokenRefresh runs a background process to periodically refresh tokens
 func (r *BlueskyRepository) backgroundTokenRefresh() {
 	for {
 		select {
 		case <-r.refreshTick.C:
 			ctx, cancel := context.WithTimeout(context.Background(), r.cfg.HTTPTimeout)
 			if err := r.RefreshToken(ctx); err != nil {
-				log.Printf("バックグラウンドトークン更新に失敗: %v", err)
+				log.Printf("failed to refresh token in background: %v", err)
 			}
 			cancel()
 		case <-r.Done:
@@ -69,7 +69,7 @@ func (r *BlueskyRepository) backgroundTokenRefresh() {
 }
 
 
-// RefreshToken はリフレッシュトークンを使用して新しいアクセストークンを取得します
+// RefreshToken uses the refresh token to obtain a new access token
 func (r *BlueskyRepository) RefreshToken(ctx context.Context) error {
 	url := fmt.Sprintf("%s/xrpc/com.atproto.server.refreshSession", r.cfg.PDSURL)
 
@@ -99,11 +99,11 @@ func (r *BlueskyRepository) RefreshToken(ctx context.Context) error {
 	return nil
 }
 
-// PostMessage は指定されたメッセージをBlueskyに投稿します
+// PostMessage posts the specified message to Bluesky
 func (r *BlueskyRepository) PostMessage(ctx context.Context, message string) error {
 	url := fmt.Sprintf("%s/xrpc/com.atproto.repo.createRecord", r.cfg.PDSURL)
 
-	// リクエストボディの作成
+	// Create request body
 	record := map[string]interface{}{
 		"$type":     "app.bsky.feed.post",
 		"text":      message,
@@ -134,12 +134,12 @@ func (r *BlueskyRepository) PostMessage(ctx context.Context, message string) err
 	resp, err := doHTTPRequest(ctx, r.client, "POST", url, buf, headers)
 	if err != nil {
 		if httpErr, ok := err.(*HTTPError); ok && httpErr.StatusCode == http.StatusUnauthorized {
-			// トークンの更新を試みる
+			// Try to refresh the token
 			if err := r.RefreshToken(ctx); err != nil {
 				return fmt.Errorf("failed to refresh token: %w", err)
 			}
 
-			// 新しいトークンで再試行
+			// Retry with new token
 			headers["Authorization"] = fmt.Sprintf("Bearer %s", r.cfg.AccessJWT)
 			// Reset buffer position for reuse
 			buf.Reset()
@@ -159,7 +159,7 @@ func (r *BlueskyRepository) PostMessage(ctx context.Context, message string) err
 	return nil
 }
 
-// HTTPError はHTTPリクエスト時のエラー情報を保持します
+// HTTPError holds error information for HTTP requests
 type HTTPError struct {
 	StatusCode int
 	Message    string

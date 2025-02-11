@@ -1,44 +1,44 @@
 # QuoteBot
 
-Blueskyに定期的に名言を投稿するボット
+A bot that periodically posts quotes to Bluesky
 
-## 必要条件
+## Requirements
 
-- Go 1.21以上
-- Blueskyアカウント
+- Go 1.21 or higher
+- Bluesky account
 
-## 環境変数
+## Environment Variables
 
-以下の環境変数を設定する必要があります：
+The following environment variables need to be set:
 
-### 必須の環境変数
+### Required Environment Variables
 
-| 環境変数 | 説明 | 例 |
+| Environment Variable | Description | Example |
 |----------|------|-----|
-| `ACCESS_JWT` | Blueskyのアクセストークン | `eyJ0eXAiOi...` |
-| `REFRESH_JWT` | Blueskyのリフレッシュトークン | `eyJ0eXAiOi...` |
-| `DID` | BlueskyのDID | `did:plc:...` |
+| `ACCESS_JWT` | Bluesky access token | `eyJ0eXAiOi...` |
+| `REFRESH_JWT` | Bluesky refresh token | `eyJ0eXAiOi...` |
+| `DID` | Bluesky DID | `did:plc:...` |
 
-### オプションの環境変数
+### Optional Environment Variables
 
-| 環境変数 | 説明 | デフォルト値 |
+| Environment Variable | Description | Default Value |
 |----------|------|------------|
-| `PDS_URL` | BlueskyのPDS URL | `https://bsky.social` |
-| `QUOTES_FILE` | 名言データのJSONファイル | `quotes.json` |
-| `POST_INTERVAL` | 投稿間隔（例：30m, 1h, 2h） | `1h` |
-| `HTTP_TIMEOUT` | HTTPリクエストのタイムアウト | `10s` |
+| `PDS_URL` | Bluesky PDS URL | `https://bsky.social` |
+| `QUOTES_FILE` | JSON file for quote data | `quotes.json` |
+| `POST_INTERVAL` | Posting interval (e.g., 30m, 1h, 2h) | `1h` |
+| `HTTP_TIMEOUT` | HTTP request timeout | `10s` |
 
-## 環境変数の設定方法
+## Setting Environment Variables
 
 ### Unix/Linux/macOS
 
 ```bash
-# 必須の環境変数
+# Required environment variables
 export ACCESS_JWT="your_access_jwt"
 export REFRESH_JWT="your_refresh_jwt"
 export DID="your_did"
 
-# オプションの環境変数（必要に応じて）
+# Optional environment variables (if needed)
 export PDS_URL="https://bsky.social"
 export QUOTES_FILE="quotes.json"
 export POST_INTERVAL="1h"
@@ -48,85 +48,85 @@ export HTTP_TIMEOUT="10s"
 ### Windows (PowerShell)
 
 ```powershell
-# 必須の環境変数
+# Required environment variables
 $env:ACCESS_JWT="your_access_jwt"
 $env:REFRESH_JWT="your_refresh_jwt"
 $env:DID="your_did"
 
-# オプションの環境変数（必要に応じて）
+# Optional environment variables (if needed)
 $env:PDS_URL="https://bsky.social"
 $env:QUOTES_FILE="quotes.json"
 $env:POST_INTERVAL="1h"
 $env:HTTP_TIMEOUT="10s"
 ```
 
-## Blueskyトークンの取得方法
+## How to Get Bluesky Tokens
 
-1. https://bsky.app にログイン
-2. ブラウザの開発者ツール（Chrome/Safariの場合は`F12`または`Command + Option + I`）を開く
-3. `Application`（アプリケーション）タブを選択
-4. 左側の`Local Storage`から`bsky.social`を選択
-5. 以下の値をコピー：
-   - `did`: あなたのDID
-   - `jwt`: アクセストークン（ACCESS_JWT）
-   - `refreshJwt`: リフレッシュトークン（REFRESH_JWT）
+1. Log in to https://bsky.app
+2. Open developer tools (Press `F12` or `Command + Option + I` in Chrome/Safari)
+3. Select the `Application` tab
+4. Select `bsky.social` from `Local Storage` on the left
+5. Copy the following values:
+   - `did`: Your DID
+   - `jwt`: Access token (ACCESS_JWT)
+   - `refreshJwt`: Refresh token (REFRESH_JWT)
 
-## プロジェクト構造
+## Project Structure
 
 ```
 .
-├── main.go                 # エントリーポイント
-├── config/                 # 設定関連
-├── internal/               # 内部パッケージ
-│   ├── domain/            # ドメインロジック
-│   ├── usecase/           # ユースケース
-│   └── interface/         # インターフェース
-│       └── repository/    # リポジトリ実装
-└── quotes.json            # 名言データ
+├── main.go                 # Entry point
+├── config/                 # Configuration
+├── internal/               # Internal packages
+│   ├── domain/            # Domain logic
+│   ├── usecase/           # Use cases
+│   └── interface/         # Interfaces
+│       └── repository/    # Repository implementations
+└── quotes.json            # Quote data
 ```
 
-## ビルドと実行
+## Build and Run
 
 ```bash
-# ビルド
+# Build
 go build -o quotebot
 
-# 実行
+# Run
 ./quotebot
 ```
 
-## 機能
+## Features
 
-- 設定された間隔（デフォルト1時間）で名言を自動投稿
-- アクセストークンの自動更新
-- エラー時の自動リトライ
-- カスタマイズ可能な投稿間隔
-- 日本語名言の投稿
+- Automatically posts quotes at set intervals (default: 1 hour)
+- Automatic access token renewal
+- Automatic retry on errors
+- Customizable posting interval
+- Quote posting functionality
 
-## エラー対応
+## Troubleshooting
 
-よくあるエラーと対処方法：
+Common errors and solutions:
 
 1. `required key XXX missing value`
-   - 必須の環境変数が設定されていません
-   - 上記の必須環境変数をすべて設定してください
+   - Required environment variables are not set
+   - Please set all required environment variables listed above
 
 2. `failed to refresh token`
-   - トークンの更新に失敗しました
-   - ACCESS_JWTとREFRESH_JWTが正しいか確認してください
-   - トークンが期限切れの場合は、再度取得してください
+   - Token refresh failed
+   - Verify that ACCESS_JWT and REFRESH_JWT are correct
+   - If tokens are expired, obtain new ones
 
 3. `failed to post message`
-   - 投稿に失敗しました
-   - インターネット接続を確認してください
-   - トークンが有効か確認してください
+   - Posting failed
+   - Check your internet connection
+   - Verify that your tokens are valid
 
-## セキュリティ注意事項
+## Security Notes
 
-- トークン（ACCESS_JWT, REFRESH_JWT）は機密情報です。他人と共有しないでください
-- トークンをソースコードやGitリポジトリに保存しないでください
-- 定期的にトークンを更新することをお勧めします
+- Tokens (ACCESS_JWT, REFRESH_JWT) are sensitive information. Do not share them with others
+- Do not store tokens in source code or Git repositories
+- It is recommended to update tokens periodically
 
-## ライセンス
+## License
 
 MIT

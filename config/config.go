@@ -7,7 +7,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-// Config はアプリケーション全体の設定を保持します
+// Config holds the application-wide configuration
 type Config struct {
 	PDSURL       string        `envconfig:"PDS_URL" default:"https://bsky.social"`
 	Collection   string        `envconfig:"COLLECTION" default:"app.bsky.feed.post"`
@@ -19,13 +19,13 @@ type Config struct {
 	HTTPTimeout  time.Duration `envconfig:"HTTP_TIMEOUT" default:"10s"`
 }
 
-// New は新しい設定インスタンスを作成します
-// 環境変数から設定を自動的に読み込み、デフォルト値がない必須項目が
-// 設定されていない場合はエラーを返します
+// New creates a new configuration instance.
+// It automatically loads settings from environment variables and returns an error
+// if any required fields are missing
 func New() (*Config, error) {
 	var cfg Config
 	if err := envconfig.Process("", &cfg); err != nil {
-		return nil, fmt.Errorf("環境変数の処理に失敗: %w", err)
+		return nil, fmt.Errorf("failed to process environment variables: %w", err)
 	}
 	return &cfg, nil
 }
