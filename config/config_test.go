@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "正常系: 必須環境変数あり",
+			name: "success case: required env vars present",
 			envVars: map[string]string{
 				"ACCESS_JWT":  "test-access-token",
 				"REFRESH_JWT": "test-refresh-token",
@@ -33,7 +33,7 @@ func TestNew(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "正常系: カスタム値指定",
+			name: "success case: custom values specified",
 			envVars: map[string]string{
 				"ACCESS_JWT":    "test-access-token",
 				"REFRESH_JWT":   "test-refresh-token",
@@ -55,13 +55,13 @@ func TestNew(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "異常系: 必須環境変数なし",
+			name:    "error case: missing required env vars",
 			envVars: map[string]string{},
 			want:    nil,
 			wantErr: true,
 		},
 		{
-			name: "異常系: 無効な時間形式",
+			name: "error case: invalid time format",
 			envVars: map[string]string{
 				"ACCESS_JWT":    "test-access-token",
 				"REFRESH_JWT":   "test-refresh-token",
@@ -75,10 +75,10 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// 環境変数をクリア
+			// Clear environment variables
 			os.Clearenv()
 
-			// テスト用の環境変数を設定
+			// Set test environment variables
 			for k, v := range tt.envVars {
 				os.Setenv(k, v)
 			}
@@ -93,7 +93,7 @@ func TestNew(t *testing.T) {
 				return
 			}
 
-			// 設定値の検証
+			// Validate configuration values
 			if got.PDSURL != tt.want.PDSURL {
 				t.Errorf("PDSURL = %v, want %v", got.PDSURL, tt.want.PDSURL)
 			}
