@@ -141,7 +141,12 @@ func (r *BlueskyRepository) PostMessage(ctx context.Context, message string) err
 
 			// 新しいトークンで再試行
 			headers["Authorization"] = fmt.Sprintf("Bearer %s", r.cfg.AccessJWT)
-			resp, err = doHTTPRequest(ctx, r.client, "POST", url, bytes.NewBuffer(bodyBytes), headers)
+			// Reset buffer position for reuse
+			buf.Reset()
+			if err := json.NewEncoder(buf).Encode(body); err != nil {
+				return fmt.Errorf("failed to encode request body for retry: %w", err)
+			}
+			resp, err = doHTTPRequest(ctx, r.client, "POST", url, buf, headers)
 			if err != nil {
 				return fmt.Errorf("failed to post message after token refresh: %w", err)
 			}
