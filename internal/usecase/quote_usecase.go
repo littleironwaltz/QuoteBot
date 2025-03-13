@@ -6,32 +6,32 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/kojikubota/quotebot/internal/domain"
+	"github.com/littleironwaltz/quotebot/internal/domain"
 )
 
-// QuoteRepository defines the persistence interface for domain models
+// QuoteRepository はドメインモデルの永続化インターフェースを定義します
 type QuoteRepository interface {
 	LoadQuotes() ([]domain.Quote, error)
 }
 
-// QuoteUseCase controls the retrieval and posting of quotes
+// QuoteUseCase は名言の取得と投稿を制御します
 type QuoteUseCase struct {
 	quoteRepo QuoteRepository
 	quotes    []domain.Quote
 }
 
-// NewQuoteUseCase creates a new QuoteUseCase instance
+// NewQuoteUseCase は新しいQuoteUseCaseインスタンスを作成します
 func NewQuoteUseCase(qr QuoteRepository) *QuoteUseCase {
 	return &QuoteUseCase{
 		quoteRepo: qr,
 	}
 }
 
-// Initialize loads the quote list and performs initialization
+// Initialize は名言リストを読み込み、初期化を実行します
 func (uc *QuoteUseCase) Initialize() error {
 	quotes, err := uc.quoteRepo.LoadQuotes()
 	if err != nil {
-		return fmt.Errorf("failed to load quotes: %w", err)
+		return fmt.Errorf("名言の読み込みに失敗しました: %w", err)
 	}
 
 	uc.quotes = quotes
@@ -39,10 +39,10 @@ func (uc *QuoteUseCase) Initialize() error {
 	return nil
 }
 
-// PostRandomQuote selects and returns a random quote
+// PostRandomQuote はランダムな名言を選択して返します
 func (uc *QuoteUseCase) PostRandomQuote(ctx context.Context) (*domain.Quote, error) {
 	if len(uc.quotes) == 0 {
-		return nil, fmt.Errorf("no quotes available")
+		return nil, fmt.Errorf("利用可能な名言がありません")
 	}
 
 	quote := uc.quotes[rand.Intn(len(uc.quotes))]

@@ -5,33 +5,33 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kojikubota/quotebot/config"
-	"github.com/kojikubota/quotebot/internal/domain"
+	"github.com/littleironwaltz/quotebot/config"
+	"github.com/littleironwaltz/quotebot/internal/domain"
 )
 
-// QuoteRepository handles persistence of quote data
+// QuoteRepository は名言データの永続化を処理します
 type QuoteRepository struct {
 	quotesFile string
 }
 
-// NewQuoteRepository creates a new QuoteRepository instance
+// NewQuoteRepository は新しいQuoteRepositoryインスタンスを作成します
 func NewQuoteRepository(cfg *config.Config) *QuoteRepository {
 	return &QuoteRepository{
 		quotesFile: cfg.QuotesFile,
 	}
 }
 
-// LoadQuotes loads quote data from the file
+// LoadQuotes はファイルから名言データを読み込みます
 func (r *QuoteRepository) LoadQuotes() ([]domain.Quote, error) {
 	file, err := os.Open(r.quotesFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open quotes file: %w", err)
+		return nil, fmt.Errorf("名言ファイルのオープンに失敗しました: %w", err)
 	}
 	defer file.Close()
 
 	var quotes []domain.Quote
 	if err := json.NewDecoder(file).Decode(&quotes); err != nil {
-		return nil, fmt.Errorf("failed to decode quotes: %w", err)
+		return nil, fmt.Errorf("名言データのデコードに失敗しました: %w", err)
 	}
 
 	return quotes, nil

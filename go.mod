@@ -1,4 +1,4 @@
-module github.com/kojikubota/quotebot
+module github.com/littleironwaltz/quotebot
 
 go 1.21
 

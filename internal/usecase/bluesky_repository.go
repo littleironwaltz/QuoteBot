@@ -2,10 +2,10 @@ package usecase
 
 import "context"
 
-// BlueskyRepository is an interface for posting to Bluesky
+// BlueskyRepository はBlueskyへの投稿用インターフェースです
 type BlueskyRepository interface {
-	// PostMessage posts the specified message to Bluesky
+	// PostMessage は指定されたメッセージをBlueskyに投稿します
 	PostMessage(ctx context.Context, message string) error
-	// RefreshToken uses the refresh token to obtain a new access token
+	// RefreshToken はリフレッシュトークンを使用して新しいアクセストークンを取得します
 	RefreshToken(ctx context.Context) error
 }

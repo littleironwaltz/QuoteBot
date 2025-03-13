@@ -9,15 +9,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kojikubota/quotebot/config"
-	"github.com/kojikubota/quotebot/internal/interface/repository"
-	"github.com/kojikubota/quotebot/internal/usecase"
+	"github.com/littleironwaltz/quotebot/config"
+	"github.com/littleironwaltz/quotebot/internal/interface/repository"
+	"github.com/littleironwaltz/quotebot/internal/usecase"
 )
 
 func main() {
 	cfg, err := config.New()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Fatalf("設定の読み込みに失敗しました: %v", err)
 	}
 
 	quoteRepo := repository.NewQuoteRepository(cfg)
@@ -25,55 +25,77 @@ func main() {
 	quoteUseCase := usecase.NewQuoteUseCase(quoteRepo)
 
 	if err := quoteUseCase.Initialize(); err != nil {
-		log.Fatalf("Failed to initialize use case: %v", err)
+		log.Fatalf("ユースケースの初期化に失敗しました: %v", err)
 	}
 
-	// Set up signal handling
+	// シグナル処理の設定
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Set up timer
+	// タイマーの設定
 	ticker := time.NewTicker(cfg.PostInterval)
 	defer ticker.Stop()
 
-	// Create application-wide context
+	// アプリケーション全体のコンテキストを作成
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fmt.Printf("QuoteBot started (posting interval: %v)...\n", cfg.PostInterval)
+	fmt.Printf("QuoteBotが起動しました（投稿間隔: %v）...\n", cfg.PostInterval)
 
-	// Initial post
+	// 初回投稿
 	reqCtx, reqCancel := context.WithTimeout(ctx, cfg.HTTPTimeout)
+
+	// 投稿前に明示的にトークンをリフレッシュ
+	log.Println("初回投稿前にトークンをリフレッシュします...")
+	if err := blueskyRepo.RefreshToken(reqCtx); err != nil {
+		log.Printf("トークンリフレッシュに失敗しました: %v", err)
+	} else {
+		log.Println("トークンリフレッシュに成功しました")
+	}
+
 	quote, err := quoteUseCase.PostRandomQuote(reqCtx)
 	if err != nil {
-		log.Printf("Failed to make initial post: %v", err)
+		log.Printf("初回投稿の実行に失敗しました: %v", err)
 	} else {
 		message := fmt.Sprintf("%s\n- %s", quote.Text, quote.Author)
 		if err := blueskyRepo.PostMessage(reqCtx, message); err != nil {
-			log.Printf("Failed to make initial post: %v", err)
+			log.Printf("初回投稿の実行に失敗しました: %v", err)
+		} else {
+			log.Println("初回投稿に成功しました")
 		}
 	}
 	reqCancel()
 
-	// Main loop
+	// メインループ
 	for {
 		select {
 		case <-ticker.C:
 			reqCtx, reqCancel := context.WithTimeout(ctx, cfg.HTTPTimeout)
+
+			// 定期的な投稿前にもトークンをリフレッシュ
+			log.Println("定期投稿前にトークンをリフレッシュします...")
+			if err := blueskyRepo.RefreshToken(reqCtx); err != nil {
+				log.Printf("トークンリフレッシュに失敗しました: %v", err)
+			} else {
+				log.Println("トークンリフレッシュに成功しました")
+			}
+
 			quote, err := quoteUseCase.PostRandomQuote(reqCtx)
 			if err != nil {
-				log.Printf("Failed to post message: %v", err)
+				log.Printf("メッセージの投稿に失敗しました: %v", err)
 				reqCancel()
 				continue
 			}
 			message := fmt.Sprintf("%s\n- %s", quote.Text, quote.Author)
 			if err := blueskyRepo.PostMessage(reqCtx, message); err != nil {
-				log.Printf("Failed to post message: %v", err)
+				log.Printf("メッセージの投稿に失敗しました: %v", err)
+			} else {
+				log.Println("メッセージの投稿に成功しました")
 			}
 			reqCancel()
 		case sig := <-sigChan:
-			fmt.Printf("\nReceived signal %v. Shutting down...\n", sig)
-			// Clean up background token refresh process
+			fmt.Printf("\nシグナル %v を受信しました。シャットダウンします...\n", sig)
+			// バックグラウンドのトークン更新プロセスをクリーンアップ
 			blueskyRepo.Done <- struct{}{}
 			return
 		}
